@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Users, FolderKanban, Activity, CreditCard, Car, LayoutDashboard, Banknote, FileText } from 'lucide-react';
+import { Users, FolderKanban, Activity, CreditCard, Car, LayoutDashboard, Banknote, FileText, Menu, X } from 'lucide-react';
 import './index.css';
 
 // Layout Component
-const Sidebar = () => {
+const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   
   const navItems = [
@@ -19,32 +19,43 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-logo">
-        <div className="logo-icon">AB</div>
-        <h2>Alam Builders</h2>
+    <>
+      <div className={`sidebar-overlay ${isOpen ? 'active' : ''}`} onClick={toggleSidebar}></div>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <div className="logo-icon">AB</div>
+          <h2>Alam Builders</h2>
+          <button className="close-sidebar-btn" onClick={toggleSidebar} type="button">
+            <X size={24} />
+          </button>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link 
+                to={item.path} 
+                key={item.name}
+                className={`nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                  }
+                }}
+              >
+                <Icon size={20} />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-      <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link 
-              to={item.path} 
-              key={item.name}
-              className={`nav-item ${isActive ? 'active' : ''}`}
-            >
-              <Icon size={20} />
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    </>
   );
 };
 
-const Header = () => {
+const Header = ({ toggleSidebar }) => {
   const location = useLocation();
   const getPageTitle = () => {
     switch(location.pathname) {
@@ -62,8 +73,13 @@ const Header = () => {
 
   return (
     <header className="top-header">
-      <div className="header-title">
-        <h1>{getPageTitle()}</h1>
+      <div className="flex items-center gap-4">
+        <button className="menu-btn" onClick={toggleSidebar} type="button">
+          <Menu size={24} />
+        </button>
+        <div className="header-title">
+          <h1>{getPageTitle()}</h1>
+        </div>
       </div>
       <div className="header-profile">
         <div className="avatar">A</div>
@@ -84,15 +100,16 @@ import WorkRecords from './pages/WorkRecords';
 import Vehicles from './pages/Vehicles';
 import SalaryAdvance from './pages/SalaryAdvance';
 import Reports from './pages/Reports';
-// Pages placeholders
 
 function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <Router>
       <div className="app-layout">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(false)} />
         <main className="main-content">
-          <Header />
+          <Header toggleSidebar={() => setIsSidebarOpen(true)} />
           <div className="page-content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
