@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
-import { Plus, Search, Calendar, X, HandCoins, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Calendar, X, HandCoins, Edit, Trash2, Eye } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import moment from 'moment';
 
 export default function SalaryAdvance() {
@@ -37,6 +38,11 @@ export default function SalaryAdvance() {
   const [editingAdvanceId, setEditingAdvanceId] = useState(null);
   const [historyFilterMonth, setHistoryFilterMonth] = useState('');
   const [appliedHistoryMonth, setAppliedHistoryMonth] = useState('');
+  
+  // Analytics State
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState([]);
+  const [selectedAnalyticsName, setSelectedAnalyticsName] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -172,6 +178,34 @@ export default function SalaryAdvance() {
       description: adv.description || ''
     });
     setShowAdvanceModal(true);
+  };
+
+  const openAnalyticsModal = (emp) => {
+    const daysInMonth = moment(processMonth, 'YYYY-MM').daysInMonth();
+    const data = [];
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = moment(processMonth, 'YYYY-MM').date(i).format('YYYY-MM-DD');
+      
+      const recordsOnDay = workRecords.filter(r => 
+        (r.employeeId?._id === emp._id || r.employeeId === emp._id) &&
+        moment(r.date).format('YYYY-MM-DD') === dateStr
+      );
+      
+      const hoursThatDay = recordsOnDay.reduce((sum, r) => sum + (r.amountCompleted || 0), 0);
+      const earnedThatDay = hoursThatDay * emp.hourlyRate;
+      
+      data.push({
+        date: `${i}`,
+        fullDate: moment(dateStr).format('MMM D, YYYY'),
+        earned: Number(earnedThatDay.toFixed(2)),
+        hours: hoursThatDay
+      });
+    }
+    
+    setAnalyticsData(data);
+    setSelectedAnalyticsName(emp.name);
+    setShowAnalyticsModal(true);
   };
 
   const openPaymentModal = (emp) => {
@@ -314,14 +348,24 @@ export default function SalaryAdvance() {
                   </td>
                   <td style={{ fontWeight: 600, fontSize: '1.1rem' }}>AED {emp.netPayable.toFixed(2)}</td>
                   <td style={{ textAlign: 'center' }}>
-                    <button 
-                      className="btn btn-primary" 
-                      style={{ padding: '0.4rem', minWidth: 'auto', background: '#2563eb' }}
-                      title="Pay Salary"
-                      onClick={() => openPaymentModal(emp)}
-                    >
-                      <HandCoins size={18} />
-                    </button>
+                    <div className="flex justify-center gap-2">
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ padding: '0.4rem', borderColor: '#38bdf8', color: '#0284c7' }}
+                        title="Daily Analytics"
+                        onClick={() => openAnalyticsModal(emp)}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ padding: '0.4rem', minWidth: 'auto', background: '#2563eb' }}
+                        title="Pay Salary"
+                        onClick={() => openPaymentModal(emp)}
+                      >
+                        <HandCoins size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )) : (
@@ -548,6 +592,55 @@ export default function SalaryAdvance() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showAnalyticsModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '800px', padding: '2rem' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+              <div className="flex-col">
+                <h2 style={{ marginBottom: '0.2rem' }}>Daily Earnings Analytics</h2>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                  {selectedAnalyticsName} — {moment(processMonth, 'YYYY-MM').format('MMMM YYYY')}
+                </span>
+              </div>
+              <button onClick={() => setShowAnalyticsModal(false)} type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={{ width: '100%', height: '350px', marginTop: '2rem' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analyticsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis yAxisId="left" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(value) => `AED ${value}`} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(value) => `${value}h`} />
+                  <Tooltip 
+                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                     labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || `Day ${label}`}
+                     formatter={(value, name) => [
+                       name === 'earned' ? `AED ${value}` : `${value} Hours`, 
+                       name === 'earned' ? 'Salary Earned' : 'Hours Logged'
+                     ]}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Line yAxisId="left" type="monotone" dataKey="earned" name="earned" stroke="var(--color-primary)" strokeWidth={3} activeDot={{ r: 8 }} />
+                  <Line yAxisId="right" type="monotone" dataKey="hours" name="hours" stroke="#10b981" strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="flex justify-end" style={{ marginTop: '2rem' }}>
+              <button type="button" className="btn btn-outline" onClick={() => setShowAnalyticsModal(false)}>Close View</button>
+            </div>
           </div>
         </div>
       )}
