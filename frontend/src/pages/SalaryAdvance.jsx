@@ -456,7 +456,7 @@ export default function SalaryAdvance() {
       {showPaymentModal && selectedEmpInfo && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)', zIndex: 9999,
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
           <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '500px' }}>
@@ -528,7 +528,7 @@ export default function SalaryAdvance() {
       {showAdvanceModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)', zIndex: 9999,
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
           <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '500px' }}>
@@ -599,7 +599,7 @@ export default function SalaryAdvance() {
       {showAnalyticsModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)', zIndex: 9999,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '1rem'
         }}>
@@ -618,7 +618,7 @@ export default function SalaryAdvance() {
             
             <div style={{ width: '100%', height: '350px', marginTop: '2rem' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analyticsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={analyticsData} margin={{ top: 5, right: 30, left: 45, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
                   <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(value) => `AED ${value}`} />
