@@ -254,8 +254,8 @@ export default function WorkRecords() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyAttendanceData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
-                  <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
-                  <YAxis tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `${val}h`} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `${val}h`} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
                     formatter={(val) => [`${val} Hours`, 'Total Hours']}
@@ -277,8 +277,7 @@ export default function WorkRecords() {
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
-                    outerRadius={100} 
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80} 
                   >
                     {employeeAttendanceData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -288,6 +287,7 @@ export default function WorkRecords() {
                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
                      formatter={(val) => [`${val} Hours`, 'Hours']}
                   />
+                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

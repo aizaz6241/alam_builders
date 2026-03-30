@@ -356,8 +356,8 @@ export default function SalaryAdvance() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyPayrollData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
-                  <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
-                  <YAxis tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `AED ${val}`} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => val} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
                     formatter={(val) => [`AED ${val}`, 'Total Salary']}
@@ -379,8 +379,7 @@ export default function SalaryAdvance() {
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
-                    outerRadius={100} 
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80} 
                   >
                     {employeeDistributionData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -390,6 +389,7 @@ export default function SalaryAdvance() {
                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
                      formatter={(val) => [`AED ${val}`, 'Gross Salary']}
                   />
+                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
