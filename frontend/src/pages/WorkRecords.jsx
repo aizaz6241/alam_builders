@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/api';
 import { Plus, Search, X, Users, Settings } from 'lucide-react';
@@ -354,7 +355,7 @@ export default function WorkRecords() {
       </div>
 
       {/* Settings Modal */}
-      {showSettingsModal && (
+      {showSettingsModal && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100,
@@ -388,11 +389,12 @@ export default function WorkRecords() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Attendance Modal */}
-      {showAttendanceModal && (
+      {showAttendanceModal && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100,
@@ -468,7 +470,8 @@ export default function WorkRecords() {
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

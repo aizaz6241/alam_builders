@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { apiClient } from '../services/api';
 import { Plus, Search, Receipt, X, Edit, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -532,7 +533,7 @@ export default function Expenses() {
         </div>
       </div>
 
-      {showExpenseModal && (
+      {showExpenseModal && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100,
@@ -727,7 +728,8 @@ export default function Expenses() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

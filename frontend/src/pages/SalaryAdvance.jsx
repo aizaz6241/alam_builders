@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { apiClient } from '../services/api';
 import { Plus, Search, Calendar, X, HandCoins, Edit, Trash2, Eye } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -539,7 +540,7 @@ export default function SalaryAdvance() {
       </div>
       )}
 
-      {showPaymentModal && selectedEmpInfo && (
+      {showPaymentModal && selectedEmpInfo && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)', zIndex: 9999,
@@ -608,10 +609,11 @@ export default function SalaryAdvance() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showAdvanceModal && (
+      {showAdvanceModal && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)', zIndex: 9999,
@@ -679,10 +681,11 @@ export default function SalaryAdvance() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showAnalyticsModal && (
+      {showAnalyticsModal && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)', zIndex: 9999,
@@ -728,7 +731,8 @@ export default function SalaryAdvance() {
               <button type="button" className="btn btn-outline" onClick={() => setShowAnalyticsModal(false)}>Close View</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
