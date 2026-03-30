@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
 import { Plus, Search, Calendar, X, HandCoins, Edit, Trash2, Eye } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import moment from 'moment';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8b5cf6', '#ec4899', '#f43f5e', '#14b8a6', '#6366f1'];
 
 export default function SalaryAdvance() {
   const [advances, setAdvances] = useState([]);
@@ -243,6 +245,42 @@ export default function SalaryAdvance() {
 
   const payrollData = calculatePayroll();
 
+  const dailyPayrollData = (() => {
+    if (!workRecords.length || !employees.length) return [];
+    const daysInMonth = moment(processMonth, 'YYYY-MM').daysInMonth();
+    const data = [];
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = moment(processMonth, 'YYYY-MM').date(i).format('YYYY-MM-DD');
+      let totalEarned = 0;
+      
+      const recordsOnDay = workRecords.filter(r => moment(r.date).format('YYYY-MM-DD') === dateStr);
+      
+      recordsOnDay.forEach(r => {
+        const empId = r.employeeId?._id || r.employeeId;
+        const emp = employees.find(e => e._id === empId);
+        if (emp) {
+          const hourlyRate = emp.salary ? (emp.salary / 30 / normalWorkingHours) : 0;
+          totalEarned += (r.amountCompleted || 0) * hourlyRate;
+        }
+      });
+      
+      data.push({
+        date: `${i}`,
+        fullDate: moment(dateStr).format('MMM D, YYYY'),
+        totalSalary: Number(totalEarned.toFixed(2))
+      });
+    }
+    return data;
+  })();
+
+  const employeeDistributionData = payrollData
+    .filter(emp => emp.grossPay > 0)
+    .map(emp => ({
+      name: emp.name,
+      value: Number(emp.grossPay.toFixed(2))
+    }));
+
   const displayAdvances = appliedHistoryMonth 
     ? advances.filter(a => {
         const start = moment(appliedHistoryMonth, 'YYYY-MM').startOf('month');
@@ -284,7 +322,7 @@ export default function SalaryAdvance() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+      <div className="responsive-row" style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem', flexWrap: 'wrap' }}>
         <button 
           onClick={() => setActiveTab('summary')}
           style={{ 
@@ -310,6 +348,53 @@ export default function SalaryAdvance() {
       </div>
 
       {activeTab === 'summary' && (
+        <>
+        <div className="responsive-row" style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
+          <div className="card" style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ marginBottom: '1rem' }}>Daily Total Salary ({moment(processMonth, 'YYYY-MM').format('MMMM YYYY')})</h3>
+            <div style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dailyPayrollData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `AED ${val}`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                    formatter={(val) => [`AED ${val}`, 'Total Salary']}
+                    labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || `Day ${label}`}
+                  />
+                  <Line type="monotone" dataKey="totalSalary" name="totalSalary" stroke="#2563eb" strokeWidth={3} activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="card" style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ marginBottom: '1rem' }}>Salary Distribution</h3>
+            <div style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={employeeDistributionData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    outerRadius={100} 
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {employeeDistributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                     formatter={(val) => [`AED ${val}`, 'Gross Salary']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
         <div className="card" style={{ marginBottom: '2rem' }}>
         <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
           <h3>Payroll Summary for {moment(processMonth, 'YYYY-MM').format('MMMM YYYY')}</h3>
@@ -379,6 +464,7 @@ export default function SalaryAdvance() {
           </table>
         </div>
       </div>
+      </>
       )}
 
       {activeTab === 'advances' && (

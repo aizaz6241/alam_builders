@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/api';
 import { Plus, Search, X, Users, Settings } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import moment from 'moment';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8b5cf6', '#ec4899', '#f43f5e', '#14b8a6', '#6366f1'];
 
 export default function WorkRecords() {
   const navigate = useNavigate();
@@ -19,6 +22,9 @@ export default function WorkRecords() {
   
   const [normalWorkingHours, setNormalWorkingHours] = useState(Number(localStorage.getItem('normalWorkingHours')) || 8);
   const [tempSettingsHours, setTempSettingsHours] = useState(normalWorkingHours);
+  const [chartStartDate, setChartStartDate] = useState(moment().startOf('month').format('YYYY-MM-DD'));
+  const [chartEndDate, setChartEndDate] = useState(moment().endOf('month').format('YYYY-MM-DD'));
+  const [chartEmployeeFilter, setChartEmployeeFilter] = useState('all');
 
   const fetchRecords = async () => {
     try {
@@ -131,6 +137,49 @@ export default function WorkRecords() {
 
   if (loading) return <div className="card">Loading attendance records...</div>;
 
+  const filteredChartRecords = records.filter(r => 
+    moment(r.date).isBetween(chartStartDate, chartEndDate, 'day', '[]')
+  );
+
+  const dailyAttendanceData = (() => {
+    const data = {};
+    const lineChartRecords = chartEmployeeFilter === 'all' 
+      ? filteredChartRecords 
+      : filteredChartRecords.filter(r => (r.employeeId?._id || r.employeeId) === chartEmployeeFilter);
+
+    lineChartRecords.forEach(r => {
+      const dateStr = moment(r.date).format('YYYY-MM-DD');
+      if (!data[dateStr]) data[dateStr] = { date: dateStr, fullDate: moment(r.date).format('MMM D, YYYY'), totalHours: 0 };
+      data[dateStr].totalHours += r.amountCompleted || 0;
+    });
+    const start = moment(chartStartDate, 'YYYY-MM-DD');
+    const end = moment(chartEndDate, 'YYYY-MM-DD');
+    const chartArr = [];
+    let curr = start.clone();
+    let count = 0;
+    while (curr.isSameOrBefore(end) && count < 60) {
+      const dStr = curr.format('YYYY-MM-DD');
+      if (data[dStr]) {
+        chartArr.push(data[dStr]);
+      } else {
+        chartArr.push({ date: dStr, fullDate: curr.format('MMM D, YYYY'), totalHours: 0 });
+      }
+      curr.add(1, 'day');
+      count++;
+    }
+    return chartArr.map(item => ({...item, date: moment(item.fullDate, 'MMM D, YYYY').format('DD MMM')}));
+  })();
+
+  const employeeAttendanceData = (() => {
+    const data = {};
+    filteredChartRecords.forEach(r => {
+      const empName = r.employeeId?.name || 'Unknown';
+      if (!data[empName]) data[empName] = { name: empName, value: 0 };
+      data[empName].value += r.amountCompleted || 0;
+    });
+    return Object.values(data);
+  })();
+
   const groupedRecords = {};
   records.forEach(rec => {
     const dateStr = moment(rec.date).format('YYYY-MM-DD');
@@ -155,6 +204,94 @@ export default function WorkRecords() {
             <Plus size={18} />
             <span>Add Attendance</span>
           </button>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+          <h3>Attendance Analytics</h3>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Employee:</span>
+              <select 
+                className="form-input" 
+                style={{ width: 'auto', padding: '0.3rem 0.6rem' }}
+                value={chartEmployeeFilter}
+                onChange={(e) => setChartEmployeeFilter(e.target.value)}
+              >
+                <option value="all">All Employees</option>
+                {employees.map(emp => (
+                  <option key={emp._id} value={emp._id}>{emp.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Range:</span>
+              <input 
+                type="date" 
+                className="form-input" 
+                style={{ width: 'auto', padding: '0.3rem 0.6rem' }}
+                value={chartStartDate}
+                onChange={(e) => setChartStartDate(e.target.value)}
+              />
+              <span style={{ color: 'var(--color-text-muted)' }}>to</span>
+              <input 
+                type="date" 
+                className="form-input" 
+                style={{ width: 'auto', padding: '0.3rem 0.6rem' }}
+                value={chartEndDate}
+                onChange={(e) => setChartEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="responsive-row" style={{ display: 'flex', gap: '2rem' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h4 style={{ marginBottom: '1rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>Daily Total Hours</h4>
+            <div style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dailyAttendanceData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `${val}h`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                    formatter={(val) => [`${val} Hours`, 'Total Hours']}
+                    labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
+                  />
+                  <Line type="monotone" dataKey="totalHours" name="Total Hours" stroke="#10b981" strokeWidth={3} activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h4 style={{ marginBottom: '1rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>Hours Distribution by Employee</h4>
+            <div style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={employeeAttendanceData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    outerRadius={100} 
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {employeeAttendanceData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                     formatter={(val) => [`${val} Hours`, 'Hours']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </div>
 

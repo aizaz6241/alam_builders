@@ -495,9 +495,24 @@ ul {
   }
   
   /* Form Wrappings & Stack Mechanics */
+  .grid-cols-4,
+  .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
   .flex.gap-4 {
     flex-direction: column;
     gap: 1rem;
+  }
+  
+  .responsive-row {
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+    align-items: stretch !important;
+  }
+  .responsive-row > * {
+    width: 100% !important;
+    flex: none !important;
   }
   
   /* Protect explicit elements from aggressive vertical stacking */

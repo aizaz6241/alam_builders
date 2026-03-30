@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
 import { Plus, Search, Receipt, X, Edit, Trash2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import moment from 'moment';
 
 export default function Expenses() {
@@ -12,6 +13,9 @@ export default function Expenses() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Office');
+  
+  const [expenseStartDate, setExpenseStartDate] = useState(moment().startOf('month').format('YYYY-MM-DD'));
+  const [expenseEndDate, setExpenseEndDate] = useState(moment().endOf('month').format('YYYY-MM-DD'));
   
   const [normalWorkingHours] = useState(Number(localStorage.getItem('normalWorkingHours')) || 8);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -228,10 +232,57 @@ export default function Expenses() {
 
   if (loading) return <div className="card">Loading expenses...</div>;
 
-  const displayExpenses = expenses.filter(exp => exp.type === activeTab);
+  const allFilteredExpenses = expenses.filter(exp => 
+    moment(exp.date).isBetween(expenseStartDate, expenseEndDate, 'day', '[]')
+  );
+
+  const getGlobalExpenseChartData = () => {
+    const grouped = {};
+    allFilteredExpenses.forEach(exp => {
+      const d = moment(exp.date).format('YYYY-MM-DD');
+      if(!grouped[d]) grouped[d] = 0;
+      grouped[d] += exp.amount;
+    });
+    return Object.keys(grouped).sort().map(d => ({ 
+      date: moment(d).format('DD MMM'), 
+      fullDate: moment(d).format('MMM D, YYYY'), 
+      amount: grouped[d] 
+    }));
+  };
+
+  const globalTotalExpenseAmount = allFilteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+  const globalExpenseDistributionData = [
+    { name: 'Business', value: Number(allFilteredExpenses.filter(e => e.type === 'Office').reduce((s, e) => s + e.amount, 0).toFixed(2)) },
+    { name: 'Personal', value: Number(allFilteredExpenses.filter(e => e.type === 'Personal').reduce((s, e) => s + e.amount, 0).toFixed(2)) }
+  ].filter(d => d.value > 0);
+
+  const EXPENSE_COLORS = ['#3b82f6', '#f59e0b']; // Blue for Business, Amber for Personal
+
+  let displayExpenses = expenses.filter(exp => exp.type === activeTab);
+  
+  displayExpenses = displayExpenses.filter(exp => 
+    moment(exp.date).isBetween(expenseStartDate, expenseEndDate, 'day', '[]')
+  );
   
   // Sort descending by date
   displayExpenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const getExpenseChartData = () => {
+    const grouped = {};
+    displayExpenses.forEach(exp => {
+      const d = moment(exp.date).format('YYYY-MM-DD');
+      if(!grouped[d]) grouped[d] = 0;
+      grouped[d] += exp.amount;
+    });
+    return Object.keys(grouped).sort().map(d => ({ 
+      date: moment(d).format('DD MMM'), 
+      fullDate: moment(d).format('MMM D, YYYY'), 
+      amount: grouped[d] 
+    }));
+  };
+
+  const totalExpenseAmount = displayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   // Group explicitly by date string
   const groupedExpenses = displayExpenses.reduce((groups, exp) => {
@@ -272,7 +323,89 @@ export default function Expenses() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+        <div className="card responsive-row" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to right, #f8fafc, #ffffff)' }}>
+          <div>
+            <h2 style={{ margin: 0, color: 'var(--color-primary)', fontSize: '1.25rem' }}>Overall Expenses Summary</h2>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-danger)', marginTop: '0.25rem' }}>
+              AED {globalTotalExpenseAmount.toLocaleString()}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Select Range:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <input 
+                type="date" 
+                className="form-input" 
+                style={{ width: 'auto', padding: '0.5rem 1rem' }}
+                value={expenseStartDate}
+                onChange={(e) => setExpenseStartDate(e.target.value)}
+              />
+              <span style={{ color: 'var(--color-text-muted)' }}>to</span>
+              <input 
+                type="date" 
+                className="form-input" 
+                style={{ width: 'auto', padding: '0.5rem 1rem' }}
+                value={expenseEndDate}
+                onChange={(e) => setExpenseEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="responsive-row" style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
+          <div className="card" style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ marginBottom: '1rem' }}>Daily Expense Trend</h3>
+            <div style={{ height: '250px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={getGlobalExpenseChartData()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                  <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `AED ${val}`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                    formatter={(val) => [`AED ${val}`, 'Total Expense']} 
+                    labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
+                  />
+                  <Line type="monotone" dataKey="amount" stroke="#ef4444" strokeWidth={3} activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="card" style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ marginBottom: '1rem' }}>Expense Distribution</h3>
+            <div style={{ height: '250px' }}>
+              {globalExpenseDistributionData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={globalExpenseDistributionData} 
+                      dataKey="value" 
+                      nameKey="name" 
+                      cx="50%" 
+                      cy="50%" 
+                      outerRadius={90} 
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {globalExpenseDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                      formatter={(val) => [`AED ${val.toLocaleString()}`, 'Amount']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-muted)' }}>
+                  No expenses in this range.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="responsive-row" style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem', flexWrap: 'wrap' }}>
           <button 
             onClick={() => setActiveTab('Office')}
             style={{ 
@@ -296,6 +429,38 @@ export default function Expenses() {
             Personal Expenses
           </button>
         </div>
+
+        <div className="responsive-row" style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
+          <div className="card" style={{ flex: 2, minWidth: 0 }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>Daily {activeTab === 'Office' ? 'Business' : 'Personal'} Expenses</h3>
+            </div>
+            <div style={{ height: '250px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getExpenseChartData()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                    <XAxis dataKey="date" tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                    <YAxis tick={{ fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `AED ${val}`} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                      formatter={(val) => [`AED ${val}`, 'Expense']} 
+                      labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
+                    />
+                    <Line type="monotone" dataKey="amount" stroke="#f59e0b" strokeWidth={3} activeDot={{ r: 8 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="card" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>Total {activeTab === 'Office' ? 'Business' : 'Personal'} Expense</h3>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-danger)' }}>
+                AED {totalExpenseAmount.toLocaleString()}
+              </div>
+              <p style={{ color: 'var(--color-text-muted)', marginTop: '0.5rem', textAlign: 'center' }}>
+                From {moment(expenseStartDate).format('MMM D, YYYY')} <br/> to {moment(expenseEndDate).format('MMM D, YYYY')}
+              </p>
+            </div>
+          </div>
 
         <div className="card">
           <h3 style={{ marginBottom: '1.5rem' }}>{activeTab === 'Office' ? 'Business' : 'Personal'} Expense Log</h3>
