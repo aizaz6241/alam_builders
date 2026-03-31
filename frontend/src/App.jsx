@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Users, FolderKanban, Activity, CreditCard, Car, LayoutDashboard, Banknote, FileText, Menu, X } from 'lucide-react';
+import { Users, FolderKanban, Activity, CreditCard, Car, LayoutDashboard, Banknote, FileText, Menu, X, Landmark } from 'lucide-react';
 import './index.css';
 
 // Layout Component
@@ -16,6 +16,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { path: '/vehicles', name: 'Vehicles', icon: Car },
     { path: '/salary', name: 'Payroll', icon: Banknote },
     { path: '/reports', name: 'Reports', icon: FileText },
+    { path: '/accounts', name: 'Accounts', icon: Landmark },
   ];
 
   return (
@@ -67,6 +68,7 @@ const Header = ({ toggleSidebar }) => {
       case '/vehicles': return 'Vehicle Fleet';
       case '/salary': return 'Payroll & Advances';
       case '/reports': return 'Business Reports';
+      case '/accounts': return 'Financial Accounts';
       default: return 'Overview';
     }
   };
@@ -100,6 +102,7 @@ import WorkRecords from './pages/WorkRecords';
 import Vehicles from './pages/Vehicles';
 import SalaryAdvance from './pages/SalaryAdvance';
 import Reports from './pages/Reports';
+import Accounts from './pages/Accounts';
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -120,6 +123,7 @@ function App() {
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/salary" element={<SalaryAdvance />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/accounts" element={<Accounts />} />
             </Routes>
           </div>
         </main>

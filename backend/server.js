@@ -24,6 +24,7 @@ const salaryAdvanceRoutes = require('./src/routes/salaryAdvanceRoutes');
 const vehicleRoutes = require('./src/routes/vehicleRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const salaryPaymentRoutes = require('./src/routes/salaryPaymentRoutes');
+const accountRoutes = require('./src/routes/accounts');
 
 app.get('/api/health', (req, res) => {
   res.json({ message: 'API is running...' });
@@ -37,6 +38,7 @@ app.use('/api/salary-advances', salaryAdvanceRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/salary-payments', salaryPaymentRoutes);
+app.use('/api/accounts', accountRoutes);
 
 const PORT = process.env.PORT || 5000;
 

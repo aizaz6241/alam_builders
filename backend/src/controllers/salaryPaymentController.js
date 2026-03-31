@@ -1,6 +1,7 @@
 const SalaryPayment = require('../models/SalaryPayment');
 const Expense = require('../models/Expense');
 const Employee = require('../models/Employee');
+const Account = require('../models/Account');
 
 const getSalaryPayments = async (req, res) => {
   try {
@@ -13,7 +14,7 @@ const getSalaryPayments = async (req, res) => {
 
 const createSalaryPayment = async (req, res) => {
   try {
-    const { employeeId, amount, date, month, description } = req.body;
+    const { employeeId, amount, date, month, description, accountId } = req.body;
     
     const payment = new SalaryPayment({
       employeeId, amount, date, month, description
@@ -30,9 +31,14 @@ const createSalaryPayment = async (req, res) => {
       category: 'Payroll',
       amount: amount,
       date: date || new Date(),
-      description: `Salary Payment for ${empName} (${month})`
+      description: `Salary Payment for ${empName} (${month})`,
+      accountId: accountId || undefined
     });
-    await expense.save();
+    const savedExpense = await expense.save();
+
+    if (savedExpense.accountId) {
+      await Account.findByIdAndUpdate(savedExpense.accountId, { $inc: { balance: -Number(amount) } });
+    }
 
     res.status(201).json(createdPayment);
   } catch (error) {

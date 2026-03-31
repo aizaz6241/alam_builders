@@ -7,7 +7,8 @@ const expenseSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   description: { type: String, required: true },
   receiptImage: { type: String }, // URL or Base64
-  vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' } // Optional reference
+  vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' }, // Optional reference
+  accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' } // Optional reference
 }, { timestamps: true });
 
 module.exports = mongoose.model('Expense', expenseSchema);

@@ -12,6 +12,7 @@ export default function SalaryAdvance() {
   const [payments, setPayments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [workRecords, setWorkRecords] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [processMonth, setProcessMonth] = useState(moment().format('YYYY-MM'));
@@ -25,7 +26,8 @@ export default function SalaryAdvance() {
     employeeId: '',
     date: moment().format('YYYY-MM-DD'),
     amount: '',
-    description: ''
+    description: '',
+    accountId: ''
   });
 
   const [paymentForm, setPaymentForm] = useState({
@@ -33,7 +35,8 @@ export default function SalaryAdvance() {
     date: moment().format('YYYY-MM-DD'),
     month: processMonth,
     amount: '',
-    description: ''
+    description: '',
+    accountId: ''
   });
   
   const [selectedEmpInfo, setSelectedEmpInfo] = useState(null);
@@ -53,16 +56,18 @@ export default function SalaryAdvance() {
 
   const fetchData = async () => {
     try {
-      const [advRes, empRes, workRes, payRes] = await Promise.all([
+      const [advRes, empRes, workRes, payRes, accRes] = await Promise.all([
         apiClient.get('/salary-advances'),
         apiClient.get('/employees'),
         apiClient.get('/work-records'),
-        apiClient.get('/salary-payments')
+        apiClient.get('/salary-payments'),
+        apiClient.get('/accounts')
       ]);
       setAdvances(advRes.data);
       setEmployees(empRes.data.filter(e => e.status === 'Active'));
       setWorkRecords(workRes.data);
       setPayments(payRes.data);
+      setAccounts(accRes.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching payroll data', error);
@@ -178,7 +183,8 @@ export default function SalaryAdvance() {
       employeeId: adv.employeeId?._id || adv.employeeId,
       date: moment(adv.date).format('YYYY-MM-DD'),
       amount: adv.amount,
-      description: adv.description || ''
+      description: adv.description || '',
+      accountId: adv.accountId?._id || adv.accountId || ''
     });
     setShowAdvanceModal(true);
   };
@@ -581,6 +587,21 @@ export default function SalaryAdvance() {
 
             <form onSubmit={handlePaySalary}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Source Account (Required)</label>
+                <select 
+                  required
+                  className="form-input"
+                  value={paymentForm.accountId}
+                  onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})}
+                >
+                  <option value="">Select funding source...</option>
+                  {accounts.map(acc => (
+                    <option key={acc._id} value={acc._id}>{acc.name} ({acc.type})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label className="form-label">Payment Date</label>
                 <input 
                   required 
@@ -638,6 +659,20 @@ export default function SalaryAdvance() {
                   <option value="">Select an employee...</option>
                   {employees.map(emp => (
                     <option key={emp._id} value={emp._id}>{emp.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Source Account (Required)</label>
+                <select 
+                  required
+                  className="form-input"
+                  value={advanceForm.accountId}
+                  onChange={e => setAdvanceForm({...advanceForm, accountId: e.target.value})}
+                >
+                  <option value="">Select funding source...</option>
+                  {accounts.map(acc => (
+                    <option key={acc._id} value={acc._id}>{acc.name} ({acc.type})</option>
                   ))}
                 </select>
               </div>

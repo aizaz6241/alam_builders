@@ -12,6 +12,7 @@ export default function Expenses() {
   const [workRecords, setWorkRecords] = useState([]);
   const [advances, setAdvances] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Office');
   
@@ -32,6 +33,7 @@ export default function Expenses() {
     employeeId: '',
     month: moment().format('YYYY-MM'),
     vehicleId: '',
+    accountId: '',
     liters: '',
     currentKm: ''
   });
@@ -42,13 +44,14 @@ export default function Expenses() {
 
   const fetchData = async () => {
     try {
-      const [expRes, empRes, vehRes, workRes, advRes, payRes] = await Promise.all([
+      const [expRes, empRes, vehRes, workRes, advRes, payRes, accRes] = await Promise.all([
         apiClient.get('/expenses'),
         apiClient.get('/employees'),
         apiClient.get('/vehicles'),
         apiClient.get('/work-records'),
         apiClient.get('/salary-advances'),
-        apiClient.get('/salary-payments')
+        apiClient.get('/salary-payments'),
+        apiClient.get('/accounts')
       ]);
       setExpenses(expRes.data);
       setEmployees(empRes.data);
@@ -56,6 +59,7 @@ export default function Expenses() {
       setWorkRecords(workRes.data);
       setAdvances(advRes.data);
       setPayments(payRes.data);
+      setAccounts(accRes.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data', error);
@@ -146,9 +150,8 @@ export default function Expenses() {
           amount: Number(expenseForm.amount)
         };
 
-        if (!payload.vehicleId) {
-          delete payload.vehicleId;
-        }
+        if (!payload.vehicleId) delete payload.vehicleId;
+        if (!payload.accountId) delete payload.accountId;
 
         if (expenseForm.category === 'Diesel' || expenseForm.category === 'Maintenance') {
           payload.vehicleId = expenseForm.vehicleId;
@@ -207,6 +210,7 @@ export default function Expenses() {
       employeeId: '',
       month: moment().format('YYYY-MM'),
       vehicleId: exp.vehicleId ? exp.vehicleId._id : '',
+      accountId: exp.accountId ? exp.accountId._id : '',
       liters: extractedLiters,
       currentKm: ''
     });
@@ -226,6 +230,7 @@ export default function Expenses() {
       employeeId: '',
       month: moment().format('YYYY-MM'),
       vehicleId: '',
+      accountId: '',
       liters: '',
       currentKm: ''
     });
@@ -473,6 +478,7 @@ export default function Expenses() {
                   <th>Category</th>
                   <th>Type</th>
                   <th>Description</th>
+                  <th>Source Account</th>
                   <th>Veh/Ref</th>
                   <th>Amount</th>
                   <th>Receipt</th>
@@ -498,6 +504,13 @@ export default function Expenses() {
                           </span>
                         </td>
                         <td style={{ color: 'var(--color-text-muted)' }}>{exp.description || '-'}</td>
+                        <td style={{ fontWeight: 500 }}>
+                          {exp.accountId ? (
+                            <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                              {exp.accountId.name}
+                            </span>
+                          ) : '-'}
+                        </td>
                         <td style={{ color: 'var(--color-text-muted)' }}>{exp.vehicleId ? exp.vehicleId.registrationNumber : '-'}</td>
                         <td style={{ fontWeight: 600, color: 'var(--color-danger)' }}>AED {exp.amount.toLocaleString()}</td>
                         <td>
@@ -669,6 +682,22 @@ export default function Expenses() {
                   </div>
                 </div>
               )}
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Source Account <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>(Required for balances)</span></label>
+                <select 
+                  className="form-input"
+                  value={expenseForm.accountId}
+                  onChange={e => setExpenseForm({...expenseForm, accountId: e.target.value})}
+                  disabled={editingExpenseId && expenseForm.category === 'Payroll'} 
+                  required={!editingExpenseId}
+                >
+                  <option value="">Legacy / Uncategorized</option>
+                  {accounts.map(acc => (
+                    <option key={acc._id} value={acc._id}>{acc.name} ({acc.type})</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label className="form-label">Date</label>
