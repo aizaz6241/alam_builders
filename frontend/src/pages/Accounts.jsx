@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { apiClient } from '../services/api';
-import { Plus, CreditCard, Wallet, Landmark, X, Activity, Trash2 } from 'lucide-react';
+import { Plus, CreditCard, Wallet, Landmark, X, Activity, Trash2, FileText, Edit2 } from 'lucide-react';
 import moment from 'moment';
 
 export default function Accounts() {
@@ -20,6 +20,81 @@ export default function Accounts() {
   const [selectedAccount, setSelectedAccount] = useState(null);
   
   const [submitting, setSubmitting] = useState(false);
+
+  // Statement State
+  const [showStatementModal, setShowStatementModal] = useState(false);
+  const [statementAccountId, setStatementAccountId] = useState(null);
+  const [statementMonth, setStatementMonth] = useState(moment().format('YYYY-MM'));
+  const [statementData, setStatementData] = useState(null);
+  const [statementLoading, setStatementLoading] = useState(false);
+
+  // Edit Transaction State
+  const [showEditTxModal, setShowEditTxModal] = useState(false);
+  const [editTxForm, setEditTxForm] = useState({ id: '', amount: '', date: '', description: '' });
+
+  const openStatementModal = (account) => {
+    setStatementAccountId(account._id);
+    setStatementMonth(moment().format('YYYY-MM'));
+    setShowStatementModal(true);
+  };
+
+  const openEditTx = (tx) => {
+    setEditTxForm({
+      id: tx._id,
+      amount: tx.amount,
+      date: moment(tx.date).format('YYYY-MM-DD'),
+      description: tx.description || ''
+    });
+    setShowEditTxModal(true);
+  };
+
+  const handleDeleteTx = async (id) => {
+    if (window.confirm('Are you sure you want to delete this transaction? This will automatically reverse its impact on your account balance.')) {
+      try {
+        await apiClient.delete(`/accounts/transactions/${id}`);
+        fetchAccounts();
+      } catch (err) {
+        alert('Error deleting transaction');
+      }
+    }
+  };
+
+  const handleUpdateTx = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await apiClient.put(`/accounts/transactions/${editTxForm.id}`, {
+        amount: editTxForm.amount,
+        date: editTxForm.date,
+        description: editTxForm.description
+      });
+      setShowEditTxModal(false);
+      fetchAccounts();
+    } catch (err) {
+      alert('Error updating transaction');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showStatementModal && statementAccountId) {
+      fetchStatement();
+    }
+  }, [statementAccountId, statementMonth, showStatementModal]);
+
+  const fetchStatement = async () => {
+    setStatementLoading(true);
+    try {
+      const res = await apiClient.get(`/accounts/${statementAccountId}/statement/${statementMonth}`);
+      setStatementData(res.data);
+    } catch (err) {
+      console.error(err);
+      alert('Error fetching statement');
+    } finally {
+      setStatementLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchAccounts();
@@ -190,14 +265,22 @@ export default function Accounts() {
               )}
             </div>
 
-            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' }}>
+            <div className="flex gap-2" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' }}>
               <button 
-                className={`btn ${account.type === 'Credit Card' ? 'btn-outline' : 'btn-primary'}`} 
-                style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}
+                className={`btn ${account.type === 'Credit Card' ? 'btn-outline' : 'btn-primary'} flex-1`} 
+                style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', alignItems: 'center', fontSize: '0.85rem' }}
                 onClick={() => openFundModal(account)}
               >
-                <Activity size={18} /> 
-                {account.type === 'Credit Card' ? 'Pay Card Bill' : 'Deposit Funds'}
+                <Activity size={16} /> 
+                {account.type === 'Credit Card' ? 'Pay Bill' : 'Deposit'}
+              </button>
+              <button 
+                className="btn btn-outline flex-1" 
+                style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', alignItems: 'center', fontSize: '0.85rem' }}
+                onClick={() => openStatementModal(account)}
+              >
+                <FileText size={16} /> 
+                Statement
               </button>
             </div>
           </div>
@@ -225,6 +308,7 @@ export default function Accounts() {
                 <th>Type</th>
                 <th>Description</th>
                 <th style={{ textAlign: 'right' }}>Amount</th>
+                <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -244,10 +328,16 @@ export default function Accounts() {
                   <td style={{ textAlign: 'right', fontWeight: 600, color: tx.type === 'Deposit' ? '#10b981' : '#f43f5e' }}>
                     {tx.type === 'Deposit' ? '+' : ''}AED {tx.amount.toLocaleString()}
                   </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="flex justify-center gap-2">
+                       <button onClick={() => openEditTx(tx)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}><Edit2 size={16} /></button>
+                       <button onClick={() => handleDeleteTx(tx._id)} style={{ background: 'none', border: 'none', color: '#f43f5e', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                    </div>
+                  </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
                     No recent transactions found.
                   </td>
                 </tr>
@@ -388,6 +478,160 @@ export default function Accounts() {
               <button type="button" className="btn btn-outline flex-1" onClick={() => setShowFundModal(false)}>Cancel</button>
               <button type="submit" className="btn btn-primary flex-1" disabled={submitting}>
                 {submitting ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Monthly Statement Modal */}
+    {showStatementModal && createPortal(
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+        backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 99999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+      }}>
+        <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+            <h2>Account Statement</h2>
+            <button onClick={() => setShowStatementModal(false)} type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+              <X size={24} />
+            </button>
+          </div>
+
+          <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <label style={{ fontWeight: 600 }}>Select Month:</label>
+            <input 
+              type="month" 
+              className="form-input" 
+              style={{ width: 'auto' }}
+              value={statementMonth}
+              onChange={e => setStatementMonth(e.target.value)}
+            />
+          </div>
+
+          {statementLoading ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading statement analytics...</div>
+          ) : statementData ? (
+            <>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.3rem' }}>Opening Balance</p>
+                  <strong style={{ fontSize: '1.2rem' }}>AED {Math.abs(statementData.openingBalance).toLocaleString()}</strong>
+                  {statementData.openingBalance < 0 && <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600 }}>Owed</div>}
+                </div>
+                <div style={{ padding: '1rem', background: '#fef2f2', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.3rem' }}>Credit Used / Spent</p>
+                  <strong style={{ fontSize: '1.2rem', color: '#ef4444' }}>AED {statementData.borrowedThisMonth.toLocaleString()}</strong>
+                </div>
+                <div style={{ padding: '1rem', background: '#f0fdf4', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.3rem' }}>Total Paid/Deposited</p>
+                  <strong style={{ fontSize: '1.2rem', color: '#10b981' }}>AED {statementData.paidThisMonth.toLocaleString()}</strong>
+                </div>
+                <div style={{ padding: '1rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.3rem' }}>Closing Balance</p>
+                  <strong style={{ fontSize: '1.2rem' }}>AED {Math.abs(statementData.closingBalance).toLocaleString()}</strong>
+                  {statementData.closingBalance < 0 && <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600 }}>Owed</div>}
+                </div>
+              </div>
+
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Ledger Activity</h3>
+              <div className="data-table-container">
+                <table className="data-table" style={{ fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Description</th>
+                      <th style={{ textAlign: 'right' }}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statementData.ledger.length > 0 ? statementData.ledger.map((line, idx) => (
+                      <tr key={idx}>
+                        <td style={{ color: 'var(--color-text-muted)' }}>{moment(line.date).format('MMM D, YYYY')}</td>
+                        <td>
+                          <span className="badge" style={{ 
+                            background: line.type === 'Borrowed' ? '#fee2e2' : '#dcfce7',
+                            color: line.type === 'Borrowed' ? '#ef4444' : '#16a34a',
+                            fontSize: '0.75rem'
+                          }}>
+                            {line.type}
+                          </span>
+                          {line.expenseType && (
+                            <span className="badge" style={{ 
+                              marginLeft: '6px',
+                              background: '#f1f5f9', color: '#64748b', fontSize: '0.70rem'
+                            }}>
+                              {line.expenseType}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ color: 'var(--color-text-muted)' }}>{line.description || '-'}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, color: line.type === 'Borrowed' ? '#ef4444' : '#10b981' }}>
+                          {line.type === 'Borrowed' ? '-' : '+'}AED {line.amount.toLocaleString()}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+                          No activity in {moment(statementMonth, 'YYYY-MM').format('MMMM YYYY')}.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Edit Transaction Modal */}
+    {showEditTxModal && createPortal(
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+        backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 99999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+      }}>
+        <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+            <h2>Edit Transaction</h2>
+            <button onClick={() => setShowEditTxModal(false)} type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+              <X size={24} />
+            </button>
+          </div>
+          <form onSubmit={handleUpdateTx}>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label">Date</label>
+              <input 
+                required type="date" className="form-input"
+                value={editTxForm.date} onChange={e => setEditTxForm({...editTxForm, date: e.target.value})}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label">Amount (AED)</label>
+              <input 
+                required type="number" step="0.01" min="0.01" className="form-input" 
+                value={editTxForm.amount} onChange={e => setEditTxForm({...editTxForm, amount: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description (Optional)</label>
+              <input 
+                type="text" className="form-input" placeholder="e.g. Bank Transfer"
+                value={editTxForm.description} onChange={e => setEditTxForm({...editTxForm, description: e.target.value})}
+              />
+            </div>
+            
+            <div className="flex gap-4" style={{ marginTop: '2rem' }}>
+              <button type="button" className="btn btn-outline flex-1" onClick={() => setShowEditTxModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary flex-1" disabled={submitting}>
+                {submitting ? 'Updating...' : 'Save Changes'}
               </button>
             </div>
           </form>

@@ -9,3 +9,30 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+apiClient.interceptors.request.use(
+  (config) => {
+    const userInfo = localStorage.getItem('ab_userInfo');
+    if (userInfo) {
+      const { token } = JSON.parse(userInfo);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('ab_userInfo');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
